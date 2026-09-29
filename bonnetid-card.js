@@ -1,4 +1,4 @@
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const API = 'https://disp-api.bonnetider.eu/rest/v1';
 const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgyMzI2MzU2LCJleHAiOjIwOTc2ODYzNTZ9.Z2ukipzy8HRp3aZ3qGjnRYEkn6n-Kh-XGUphYDijt-w';
 const ZONE = 'Europe/Oslo';
@@ -53,6 +53,11 @@ const ASR_METHODS = [
   { value: 'shadow_1x', label: '1x skygge' },
   { value: 'shadow_2x', label: '2x skygge (Hanafi)' },
   { value: 'wusta', label: 'Wusta' },
+];
+
+const THEMES = [
+  { value: 'app', label: 'Bønnetid-appen' },
+  { value: 'ha', label: 'Home Assistant-temaet' },
 ];
 
 const ASR_BY_NUMBER = ['irn', 'shadow_1x', 'shadow_2x', 'wusta'];
@@ -481,6 +486,14 @@ const STYLES = `
     --ink: #F6F8F7; --ink-secondary: #C6D0CB; --ink-muted: #8C9A93; --track: #27362F;
     --track-marker: #354740;
   }
+  ha-card.theme {
+    --brand: var(--primary-color); --brand-plate: rgba(var(--rgb-primary-color, 3, 169, 244), 0.16);
+    --on-brand-plate: var(--primary-text-color); --surface: var(--ha-card-background, var(--card-background-color));
+    --ink: var(--primary-text-color); --ink-secondary: var(--secondary-text-color);
+    --ink-muted: var(--secondary-text-color); --track: var(--divider-color);
+    --track-marker: var(--disabled-text-color, var(--divider-color));
+  }
+  .tight { min-height: 4px; }
   .row { display: flex; align-items: center; gap: 5px; min-width: 0; }
   .caption { font-size: 12px; line-height: 16px; }
   .caption2 { font-size: 11px; line-height: 13px; }
@@ -584,7 +597,7 @@ class BonnetidCard extends HTMLElement {
   getGridOptions() {
     return this.variant === 'small'
       ? { columns: 6, rows: 3, min_columns: 6, min_rows: 3 }
-      : { columns: 12, rows: 3, min_columns: 9, min_rows: 3 };
+      : { columns: 12, rows: 3, min_columns: 9, min_rows: this.variant === 'medium' ? 2 : 3 };
   }
 
   connectedCallback() {
@@ -630,7 +643,7 @@ class BonnetidCard extends HTMLElement {
     if (!this._config) return;
     const now = new Date();
     const view = this._view(now);
-    const html = `<style>${STYLES}</style><ha-card class="${this._dark ? 'dark' : ''}">${view.html}</ha-card>`;
+    const html = `<style>${STYLES}</style><ha-card class="${this._config.theme === 'ha' ? 'theme' : this._dark ? 'dark' : ''}">${view.html}</ha-card>`;
     if (html !== this._html) {
       this._html = html;
       this.shadowRoot.innerHTML = html;
@@ -737,9 +750,9 @@ class BonnetidCard extends HTMLElement {
           <span class="caption secondary ellipsis" style="flex:none">${escape(locationName)}</span>
           ${hijri}
         </div>
-        <div class="spacer"></div>
+        <div class="spacer tight"></div>
         <div class="columns">${columns}</div>
-        <div class="spacer"></div>
+        <div class="spacer tight"></div>
         <div class="row brand">
           <ha-icon icon="${ICONS[moment.headline.kind]}" style="--mdc-icon-size:11px"></ha-icon>
           <span class="caption footer ellipsis">${footer}</span>
@@ -835,6 +848,7 @@ const FORM_LABELS = {
   mosque: 'Moské (for jamat og Jumuah)',
   show_jamat: 'Vis jamat-tider',
   asr_method: 'Asr-metode',
+  theme: 'Utseende',
 };
 
 class BonnetidCardEditor extends HTMLElement {
@@ -911,12 +925,14 @@ class BonnetidCardEditor extends HTMLElement {
       { name: 'mosque', selector: { select: { mode: 'dropdown', options: mosqueOptions } } },
       { name: 'show_jamat', selector: { boolean: {} } },
       { name: 'asr_method', selector: { select: { mode: 'dropdown', options: ASR_METHODS } } },
+      { name: 'theme', selector: { select: { mode: 'dropdown', options: THEMES } } },
     ];
     this._form.data = {
       location,
       mosque,
       show_jamat: Boolean(this._config.show_jamat),
       asr_method: this._config.asr_method ?? AUTO,
+      theme: this._config.theme ?? 'app',
     };
   }
 
@@ -928,6 +944,7 @@ class BonnetidCardEditor extends HTMLElement {
     }
     if (!config.mosque || config.mosque === NO_MOSQUE) delete config.mosque;
     if (!config.asr_method || config.asr_method === AUTO) delete config.asr_method;
+    if (config.theme !== 'ha') delete config.theme;
     if (!config.location) delete config.location;
     this._config = config;
     this.dispatchEvent(

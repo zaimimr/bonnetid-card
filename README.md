@@ -43,6 +43,7 @@ show_jamat: true
 | `location` | | Kommune code, for example `NO0301` for Oslo. Optional when `mosque` is set |
 | `mosque` | | Organisation number of a mosque. Adds jamat times and Jumuah on Fridays |
 | `show_jamat` | `false` | Show the mosque's jamat times next to the adhan times |
+| `theme` | `app` | `app` uses the app's emerald colours, `ha` follows your Home Assistant theme |
 | `asr_method` | `auto` | `irn`, `shadow_1x`, `shadow_2x` or `wusta`. `auto` uses the mosque, then the place |
 
 On Fridays the Dhuhr slot reads **Jumuah** with the mosque's first congregation time, until half an
